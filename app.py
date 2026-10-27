@@ -28,7 +28,7 @@ from moods import MOODS, nearest, settings_for
 ROOT = os.path.dirname(os.path.abspath(__file__))
 WEB = os.path.join(ROOT, "web")
 LIVE = os.path.join(ROOT, "output", "live")
-HOST = os.environ.get("HOST", "127.0.0.1")      # a hosting service sets HOST=0.0.0.0 (see Dockerfile)
+HOST = os.environ.get("HOST", "127.0.0.1")      # a hosting service sets HOST=0.0.0.0
 PORT = int(os.environ.get("PORT", "8000"))
 MAX_JOBS = 50                                    # forget old duels so a public server never fills up
 
@@ -117,6 +117,9 @@ class Handler(SimpleHTTPRequestHandler):
             base = settings_for(mood_id if mood_id in MOODS else nearest(e, d))   # chords + personalities
             base.update({k: v for k, v in body.items() if k in engine.DEFAULTS})
             cfg = engine.clean_config(base)
+            if os.environ.get("LIGHT_MODE"):          # small free servers: keep each duel quick
+                cfg["depth"] = min(cfg["depth"], 2)
+                cfg["population"], cfg["generations"] = 30, 15
             if mood_id in MOODS:
                 label = MOODS[mood_id]["name"]
             else:
