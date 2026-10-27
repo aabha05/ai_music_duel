@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AI Music Duel: a guided demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F2F3F8; --surface:#FFFFFF; --sunk:#E6E8F1; --ink:#1B1D33; --muted:#585B78; --line:#D3D6E4;
+  --ember:#D9541A; --tide:#0E8597; --gold:#A87508; --focus:#4B57D6;
+  --display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#15172B; --surface:#1E2140; --sunk:#262A4D; --ink:#ECEAF6; --muted:#A3A5C2; --line:#353963;
+    --ember:#FF7A3D; --tide:#3CC8D8; --gold:#F2C14E; --focus:#9AA4FF;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#15172B; --surface:#1E2140; --sunk:#262A4D; --ink:#ECEAF6; --muted:#A3A5C2; --line:#353963;
+  --ember:#FF7A3D; --tide:#3CC8D8; --gold:#F2C14E; --focus:#9AA4FF;
+}
+*,*::before,*::after{box-sizing:inherit}
+[hidden]{display:none!important}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 1.0625rem/1.6 var(--body)}
+.wrap{max-width:1040px;margin:0 auto;padding:2rem 1.25rem 4rem}
+h1,h2,h3{font-family:var(--display);line-height:1.1;margin:0}
+h1{font-size:clamp(2.2rem,6vw,3.8rem);font-weight:800;letter-spacing:-.02em}
+h2{font-size:clamp(1.6rem,3.6vw,2.3rem);font-weight:700;letter-spacing:-.01em;margin-bottom:.6rem}
+h3{font-size:1.25rem;font-weight:700}
+p{margin:.5rem 0;max-width:68ch}
+.lede{font-size:1.2rem;color:var(--muted);max-width:60ch;margin-top:.8rem}
+.vs{display:inline-flex;gap:.4em;align-items:baseline}
+.vs .e{color:var(--ember)} .vs .t{color:var(--tide)} .vs small{font-size:.45em;color:var(--muted);font-weight:500}
+
+/* stepper */
+nav.steps{display:flex;gap:.4rem;margin:2rem 0 1.25rem;overflow-x:auto;padding-bottom:.25rem}
+nav.steps button{flex:1 0 auto;min-width:8.5rem;text-align:left;border:1px solid var(--line);background:var(--surface);
+  color:var(--muted);border-radius:10px;padding:.55rem .8rem;font:inherit;font-size:.92rem;cursor:pointer;line-height:1.25}
+nav.steps button b{display:block;font-family:var(--display);font-size:1.05rem;color:var(--ink)}
+nav.steps button[aria-current="step"]{border-color:var(--ink);background:var(--ink);color:var(--bg)}
+nav.steps button[aria-current="step"] b{color:var(--bg)}
+button:focus-visible,a:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+
+section.panel{display:none;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:clamp(1.1rem,3vw,2rem)}
+section.panel.on{display:block}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-top:1.25rem}
+@media (max-width:720px){.grid2{grid-template-columns:1fr}}
+.player{border-radius:14px;padding:1.2rem;background:var(--sunk);border-left:6px solid var(--c)}
+.player h3{color:var(--c);font-size:1.6rem}
+.player ul{margin:.5rem 0 .8rem;padding-left:1.1rem}
+.btn{font:700 1rem var(--body);border-radius:999px;padding:.6rem 1.15rem;border:2px solid var(--ink);background:var(--ink);color:var(--bg);cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink)}
+.btn.c{background:var(--c);border-color:var(--c);color:#fff}
+.btn:disabled{opacity:.45;cursor:default}
+.rules-box{margin-top:1.25rem;background:var(--sunk);border-radius:14px;padding:1rem 1.2rem}
+.rules-box ol{margin:.4rem 0 0;padding-left:1.3rem}
+.navrow{display:flex;justify-content:space-between;gap:1rem;margin-top:1.6rem;flex-wrap:wrap}
+
+/* mood */
+.presets{display:flex;gap:.6rem;flex-wrap:wrap;margin:1rem 0}
+.presets button{font:700 1rem var(--body);padding:.6rem 1rem;border-radius:12px;border:2px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.presets button small{display:block;font-weight:400;font-size:.85rem;color:var(--muted)}
+.presets button[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.dials{display:grid;grid-template-columns:repeat(2,1fr);gap:1rem;margin:1rem 0}
+.dial label{display:block;font-weight:700}
+.meter{height:12px;background:var(--sunk);border-radius:6px;overflow:hidden;margin-top:.35rem}
+.meter i{display:block;height:100%;background:var(--ink);border-radius:6px;transition:width .5s}
+.rule{display:grid;grid-template-columns:3.2rem 1fr;gap:.8rem;align-items:center;padding:.45rem 0;border-top:1px solid var(--line)}
+.rule.off{opacity:.38}
+.rule .s{font-family:var(--display);font-weight:700;font-size:1.2rem;text-align:right}
+.rule .bar{height:6px;background:var(--sunk);border-radius:3px;margin-top:.3rem}
+.rule .bar i{display:block;height:100%;background:var(--ink);border-radius:3px}
+.result{display:flex;flex-wrap:wrap;gap:.6rem;margin-top:1rem}
+.chip{background:var(--sunk);border-radius:10px;padding:.5rem .8rem}
+.chip b{font-family:var(--display);font-size:1.25rem;display:block}
+
+/* mood map */
+.moodwrap{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:1.5rem;margin-top:1rem}
+@media (max-width:760px){.moodwrap{grid-template-columns:1fr}}
+.mapbox{display:grid;grid-template-columns:auto 1fr;grid-template-rows:1fr auto;gap:.3rem}
+.map{grid-column:2;grid-row:1;position:relative;aspect-ratio:1/1;border-radius:14px;cursor:crosshair;
+  background:linear-gradient(to right, color-mix(in srgb, var(--tide) 22%, var(--sunk)), var(--sunk) 50%, color-mix(in srgb, var(--ember) 22%, var(--sunk)));
+  background-color:var(--sunk);border:1px solid var(--line);overflow:hidden}
+.map::before,.map::after{content:"";position:absolute;background:var(--line)}
+.map::before{left:50%;top:0;bottom:0;width:1px}.map::after{top:50%;left:0;right:0;height:1px}
+.axis-x{grid-column:2;display:flex;justify-content:space-between;font-size:.85rem;color:var(--muted)}
+.axis-y{grid-column:1;grid-row:1;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-end;font-size:.85rem;color:var(--muted);writing-mode:horizontal-tb}
+.mood{position:absolute;transform:translate(-50%,-50%);border:0;background:none;color:var(--ink);font:700 .9rem var(--body);cursor:pointer;padding:.2rem .3rem;border-radius:8px;display:flex;flex-direction:column;align-items:center;gap:.15rem;z-index:2}
+.mood i{width:14px;height:14px;border-radius:50%;border:2px solid var(--ink);background:var(--surface)}
+.mood.has i{background:var(--ink)}
+.mood[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.mood[aria-pressed="true"] i{border-color:var(--bg);background:var(--bg)}
+.pin{position:absolute;width:20px;height:20px;border-radius:50%;border:3px solid var(--gold);background:color-mix(in srgb, var(--gold) 35%, transparent);transform:translate(-50%,-50%);z-index:1;pointer-events:none}
+.compose h3{font-size:1.8rem}
+.muted{color:var(--muted)}
+.field{margin:1rem 0}
+.field>label{display:block;font-weight:700;margin-bottom:.3rem}
+.row{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
+.field input{font:700 1.1rem var(--body);width:9rem;padding:.45rem .6rem;border-radius:10px;border:2px solid var(--line);background:var(--surface);color:var(--ink)}
+.btn.small{padding:.4rem .9rem;font-size:.9rem}
+.seg button{font:700 .9rem var(--body);padding:.45rem .8rem;border-radius:10px;border:2px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.seg button[aria-pressed="true"]{border-color:var(--ink);background:var(--ink);color:var(--bg)}
+#job{margin-top:1rem}
+#job-line{min-height:1.6em;margin:.4rem 0}
+.note{background:var(--sunk);border-radius:12px;padding:.8rem 1rem;margin-top:1rem}
+
+/* stage */
+.stage{margin-top:1rem;border-radius:14px;background:var(--sunk);overflow:hidden}
+.stage-head{display:grid;grid-template-columns:auto 1fr auto;align-items:center;padding:.8rem 1rem;gap:1rem}
+@media (max-width:560px){.stage-head{grid-template-columns:1fr 1fr}.stage-head .tug{grid-column:1 / -1;grid-row:2}}
+.name{font-family:var(--display);font-weight:800;font-size:1.5rem}
+.name.e{color:var(--ember)} .name.t{color:var(--tide)}
+.name small{display:block;font:400 .85rem var(--body);color:var(--muted)}
+.tug{flex:1;min-width:180px}
+.tug .track{position:relative;height:14px;border-radius:7px;background:var(--tide);overflow:hidden}
+.tug .track i{position:absolute;inset:0 auto 0 0;background:var(--ember);width:50%;transition:width .4s}
+.tug .nums{display:flex;justify-content:space-between;font-family:var(--display);font-weight:700;margin-top:.2rem}
+.roll-scroll{overflow-x:auto}
+canvas#roll{display:block;width:100%;height:320px;min-width:640px}
+.controls{display:flex;gap:.6rem;align-items:center;padding:.8rem 1rem;flex-wrap:wrap}
+.turns{display:flex;gap:.3rem;flex-wrap:wrap}
+.turns button{font:700 .85rem var(--body);width:2.2rem;height:2.2rem;border-radius:8px;border:2px solid var(--c);background:transparent;color:var(--ink);cursor:pointer}
+.turns button.now{background:var(--c);color:#fff}
+.commentary{display:grid;grid-template-columns:1.3fr 1fr;gap:1.25rem;margin-top:1.25rem}
+@media (max-width:720px){.commentary{grid-template-columns:1fr}}
+.say{border-left:6px solid var(--c,var(--line));padding:.2rem 0 .2rem 1rem;min-height:9rem}
+.say h3{color:var(--c,var(--ink))}
+.say .notes{font-size:.9rem;color:var(--muted);word-spacing:.15em}
+.parts .row{display:grid;grid-template-columns:minmax(9rem,11rem) 1fr 2.8rem;gap:.6rem;align-items:center;margin:.35rem 0}
+.parts .row span:first-child{font-weight:700}
+.parts .row small{display:block;color:var(--muted);font-weight:400;font-size:.8rem;line-height:1.2}
+.parts .row em{font-style:normal;text-align:right;font-family:var(--display);font-weight:700}
+.big{font-family:var(--display);font-weight:800;font-size:2.4rem;line-height:1}
+
+/* decide / ending */
+.tree{margin-top:1rem;background:#fff;border-radius:12px;padding:.5rem;overflow-x:auto}
+.tree img{display:block;width:100%;min-width:640px;height:auto}
+.stats{display:flex;gap:1rem;flex-wrap:wrap;margin:1rem 0}
+.stat{flex:1;min-width:10rem;background:var(--sunk);border-radius:12px;padding:.9rem 1rem}
+.stat .big{font-size:2.6rem}
+.thinking{margin:1rem 0;padding-left:1.2rem}
+.thinking li{margin:.35rem 0}
+.path{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin:1rem 0;font-family:var(--display);font-weight:800;font-size:1.8rem}
+.path span{background:var(--sunk);border-radius:10px;padding:.3rem .8rem}
+.path .home{background:var(--gold);color:#1B1D33}
+.path i{font-style:normal;color:var(--muted);font-size:1.2rem}
+.winner{font-family:var(--display);font-weight:800;font-size:clamp(1.8rem,5vw,2.8rem)}
+
+/* inside */
+.pipe{list-style:none;margin:1rem 0;padding:0;counter-reset:p}
+.pipe li{display:grid;grid-template-columns:2.4rem 1fr;gap:.8rem;padding:.8rem 0;border-top:1px solid var(--line)}
+.pipe li::before{counter-increment:p;content:counter(p);font-family:var(--display);font-weight:800;font-size:1.6rem;color:var(--muted)}
+.pipe b{font-family:var(--display);font-size:1.1rem}
+.pipe code,.cmd,code.inline{font-family:Consolas,"Cascadia Mono",monospace;font-size:.92em;background:var(--sunk);border-radius:6px;padding:.1rem .35rem}
+.cmd{display:block;padding:.7rem .9rem;margin:.4rem 0;overflow-x:auto;white-space:pre}
+footer{color:var(--muted);font-size:.9rem;margin-top:2rem}
+footer code{font-family:Consolas,"Cascadia Mono",monospace;background:var(--sunk);border-radius:6px;padding:.1rem .35rem}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1 class="vs"><span class="e">Ember</span><small>vs</small><span class="t">Tide</span></h1>
+    <p class="lede">Two AI musicians take turns improvising short tunes, each trying to out-play the other. This walkthrough shows you what they do and how they think, using real duels composed by the project.</p>
+  </header>
+
+  <nav class="steps" aria-label="Demo steps">
+    <button data-go="meet"><b>1 Meet them</b>Who is playing</button>
+    <button data-go="mood"><b>2 Pick a mood</b>Fuzzy logic</button>
+    <button data-go="duel"><b>3 The duel</b>Watch and listen</button>
+    <button data-go="decide"><b>4 How they choose</b>Thinking ahead</button>
+    <button data-go="ending"><b>5 The ending</b>Finding home</button>
+    <button data-go="inside"><b>6 What’s inside</b>All the AI parts</button>
+  </nav>
+
+  <!-- 1 -->
+  <section class="panel" id="p-meet" aria-labelledby="h-meet">
+    <h2 id="h-meet">Meet the two musicians</h2>
+    <p>Neither of these musicians is a recording. Each one is a small program that writes its own music on the spot, then listens to its rival and answers back, like a rap battle with melodies.</p>
+    <div class="grid2" id="players"></div>
+    <div class="rules-box">
+      <h3>The rules of the duel</h3>
+      <ol>
+        <li>They take turns. Each turn is one short tune, 2 bars long.</li>
+        <li>A judge gives every tune a score out of 10.</li>
+        <li>A good tune sounds natural, fits the background chords, matches the mood, and works as a reply to the rival’s last tune.</li>
+        <li>When the turns run out, the higher total wins and plays the ending.</li>
+      </ol>
+    </div>
+    <div class="navrow"><span></span><button class="btn" data-go="mood">Next: pick a mood</button></div>
+  </section>
+
+  <!-- 2 -->
+  <section class="panel" id="p-mood" aria-labelledby="h-mood">
+    <h2 id="h-mood">Pick a mood</h2>
+    <p>Psychologists describe feelings on two axes: how much energy, and how bright or dark. Every mood is a point on this map. Pick a named mood, or click anywhere on the map to invent one.</p>
+    <div class="moodwrap">
+      <div class="mapbox">
+        <div class="map" id="map" aria-label="Mood map"><span class="pin" id="pin" hidden></span></div>
+        <div class="axis-x"><span>bright</span><span>darkness</span><span>dark</span></div>
+        <div class="axis-y"><span>intense</span><span>energy</span><span>calm</span></div>
+      </div>
+      <div class="compose">
+        <h3 id="pick-name"></h3>
+        <p id="pick-about" class="muted"></p>
+        <p class="muted" id="pick-xy"></p>
+        <div class="field">
+          <label for="seed">Variation number</label>
+          <div class="row"><input id="seed" type="number" min="0" max="2147483647" value="7"><button class="btn ghost small" id="shuffle">Shuffle</button></div>
+          <small class="muted">Same mood, different number, completely different tune.</small>
+        </div>
+        <div class="field" role="radiogroup" aria-label="How far ahead the musicians think">
+          <label>How far ahead they think</label>
+          <div class="row seg">
+            <button data-depth="2" aria-pressed="false">2 moves (quick)</button>
+            <button data-depth="3" aria-pressed="true">3 moves (deep)</button>
+          </div>
+        </div>
+        <button class="btn" id="compose">Compose this mood</button>
+        <div id="job" hidden>
+          <div class="meter"><i id="job-bar"></i></div>
+          <p id="job-line" class="muted"></p>
+          <div class="row" id="job-done" hidden>
+            <button class="btn" id="job-play">Play it</button>
+            <button class="btn ghost" id="job-keep">Keep it on the website</button>
+          </div>
+        </div>
+        <p id="offline" class="note" hidden>This online version plays the duels the AI has already composed: click any mood with a filled dot, or pick from the list below. Composing brand-new duels runs the Python AI itself, so it works when the project is started on a computer with <code class="inline">python app.py</code>.</p>
+      </div>
+    </div>
+    <h3 style="margin-top:1.6rem">Duels ready to play</h3>
+    <p class="muted">Pick one, and every step of this demo switches to that duel.</p>
+    <div class="presets" id="presets" role="group" aria-label="Choose a duel"></div>
+    <h3 style="margin-top:1.6rem">How fuzzy logic read this duel’s mood</h3>
+    <p id="mood-of"></p>
+    <div class="dials">
+      <div class="dial"><label>Energy <span id="v-energy"></span></label><div class="meter"><i id="m-energy"></i></div></div>
+      <div class="dial"><label>Darkness <span id="v-dark"></span></label><div class="meter"><i id="m-dark"></i></div></div>
+    </div>
+    <h3>Which rules switched on, and how strongly</h3>
+    <p>In fuzzy logic a rule doesn’t have to be fully true or fully false. It can be 60% true, and then it has 60% of its effect.</p>
+    <div id="rules"></div>
+    <h3 style="margin-top:1.2rem">The exact settings it produced</h3>
+    <div class="result" id="result"></div>
+    <div class="navrow"><button class="btn ghost" data-go="meet">Back</button><button class="btn" data-go="duel">Next: watch the duel</button></div>
+  </section>
+
+  <!-- 3 -->
+  <section class="panel" id="p-duel" aria-labelledby="h-duel">
+    <h2 id="h-duel">Watch the duel</h2>
+    <p>Press play. Each coloured block is a note: higher blocks are higher notes, longer blocks are held longer. Follow the moving line as it plays, and read what happened on each turn below.</p>
+    <div class="stage">
+      <div class="stage-head">
+        <div class="name e">Ember<small>left speaker</small></div>
+        <div class="tug" aria-live="polite">
+          <div class="track"><i id="tug"></i></div>
+          <div class="nums"><span id="tot-e" style="color:var(--ember)">0.0</span><span id="tot-t" style="color:var(--tide)">0.0</span></div>
+        </div>
+        <div class="name t" style="text-align:right">Tide<small>right speaker</small></div>
+      </div>
+      <div class="roll-scroll"><canvas id="roll" aria-label="Piano roll of the duel"></canvas></div>
+      <div class="controls">
+        <button class="btn" id="play">Play the duel</button>
+        <span style="color:var(--muted)">or jump to a turn</span>
+        <div class="turns" id="turns"></div>
+      </div>
+    </div>
+    <div class="commentary">
+      <div class="say" id="say">
+        <h3>Press play to start</h3>
+        <p>The duel lasts about <span id="len"></span> seconds. Turn your volume up.</p>
+      </div>
+      <div class="parts" id="parts"></div>
+    </div>
+    <div class="navrow"><button class="btn ghost" data-go="mood">Back</button><button class="btn" data-go="decide">Next: how they choose</button></div>
+  </section>
+
+  <!-- 4 -->
+  <section class="panel" id="p-decide" aria-labelledby="h-decide">
+    <h2 id="h-decide">How does a musician choose what to play?</h2>
+    <p>Like a chess player, it thinks a few moves ahead. Here is what Ember did before playing its very first tune.</p>
+    <ol class="thinking">
+      <li><strong>Invent options.</strong> A genetic algorithm breeds hundreds of possible tunes, keeping and mixing the best ones like natural selection, until 5 strong options are left.</li>
+      <li><strong>Imagine the future.</strong> For each option, Ember asks: what’s Tide’s best reply? And then what’s my best answer to that?</li>
+      <li><strong>Assume the rival is smart.</strong> Ember picks the option that still leaves it ahead even when Tide replies perfectly. This is called <strong>minimax</strong>.</li>
+      <li><strong>Skip hopeless options early.</strong> As soon as Ember sees that Tide has a crushing reply to an option, it stops examining that option. This shortcut is <strong>alpha-beta pruning</strong>.</li>
+    </ol>
+    <div class="stats">
+      <div class="stat"><div class="big" id="s-mm"></div>possible futures if you check every one</div>
+      <div class="stat"><div class="big" id="s-ab"></div>futures Ember actually checked</div>
+      <div class="stat"><div class="big" id="s-pct"></div>less work, and the exact same choice</div>
+    </div>
+    <h3>Ember’s first decision, drawn out</h3>
+    <p>Read it top to bottom: now, Ember’s 5 options, Tide’s replies, Ember’s answers. The orange line is the move Ember played. Every red ✗ is a branch it skipped.</p>
+    <div class="tree"><img id="tree" alt="Search tree of Ember’s first move with pruned branches marked"></div>
+    <div class="navrow"><button class="btn ghost" data-go="duel">Back</button><button class="btn" data-go="ending">Next: the ending</button></div>
+  </section>
+
+  <!-- 5 -->
+  <section class="panel" id="p-ending" aria-labelledby="h-ending">
+    <h2 id="h-ending">The winner plays the ending</h2>
+    <div class="winner" id="winner"></div>
+    <p id="final"></p>
+    <p>Music feels finished when it lands back on its home note. Getting there smoothly, with small steps instead of awkward jumps, is a route-finding problem, just like a map app finding the quickest road. The program solves it with <strong>A* search</strong>.</p>
+    <div class="path" id="path"></div>
+    <p id="astar"></p>
+    <button class="btn" id="play-end">Hear the last turn and the ending</button>
+    <div class="navrow"><button class="btn ghost" data-go="decide">Back</button><button class="btn" data-go="inside">Next: what’s inside</button></div>
+  </section>
+
+  <!-- 6 -->
+  <section class="panel" id="p-inside" aria-labelledby="h-inside">
+    <h2 id="h-inside">Everything that happened, in order</h2>
+    <p>Every step below is a different AI technique from the course, and each lives in its own file.</p>
+    <ol class="pipe">
+      <li><div><b>Fuzzy logic sets the mood</b><p>Vague words like “fairly dark” become exact numbers: tempo, key, how busy the notes are. <code>fuzzy_mood.py</code></p></div></li>
+      <li><div><b>A neural network learns what music sounds like</b><p>It studied 11 famous old tunes against random noise, and now rates any tune from 0 to 1 for how natural it sounds. <code>critic.py</code></p></div></li>
+      <li><div><b>A judge scores every tune out of 10</b><p>It combines the neural network with music rules: harmony, mood and whether the tune works as a reply. <code>judge.py</code></p></div></li>
+      <li><div><b>A genetic algorithm invents options</b><p>It breeds and mutates tunes over many generations, and hill climbing polishes the best ones. <code>genetic.py</code></p></div></li>
+      <li><div><b>Minimax with alpha-beta picks the move</b><p>Each musician looks three turns ahead and skips hopeless branches. <code>adversarial.py</code></p></div></li>
+      <li><div><b>A* search plans the ending</b><p>It finds the smoothest path back to the home note. <code>cadence.py</code></p></div></li>
+    </ol>
+    <h3>Make new duels</h3>
+    <p>Run the live demo, then pick any mood and press Compose:</p>
+    <code class="cmd">python app.py</code>
+    <p>Or compose from the terminal. Each run is added to this page:</p>
+    <code class="cmd">python duel.py --list-moods
+python duel.py --mood spooky
+python duel.py --mood spooky --seed 42
+python duel.py --energy 0.3 --darkness 0.6</code>
+    <div class="navrow"><button class="btn ghost" data-go="ending">Back</button><button class="btn" data-go="meet">Start the tour again</button></div>
+  </section>
+
+  <footer>Every duel on this page was generated by running <code>duel.py</code>, then replayed in your browser with a simple synthesiser.</footer>
+</div>
+
+<script src="data.js"></script>
+<script>
+const RUNS = (window.DUEL_DATA || {runs:{}}).runs;
+const MOTIFS = (window.DUEL_DATA || {}).motifs;
+let preset = (window.DUEL_DATA || {}).latest || Object.keys(RUNS)[0];
+
+const $ = s => document.querySelector(s);
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+/* ---------- navigation ---------- */
+const STEPS = ["meet","mood","duel","decide","ending","inside"];
+function go(step, push=true){
+  if(!STEPS.includes(step)) step = "meet";
+  document.querySelectorAll("section.panel").forEach(p => p.classList.toggle("on", p.id === "p-"+step));
+  document.querySelectorAll("nav.steps button").forEach(b => {
+    if(b.dataset.go === step) b.setAttribute("aria-current", "step"); else b.removeAttribute("aria-current");
+  });
+  const cur = document.querySelector(`nav.steps button[data-go="${step}"]`);
+  if(cur) cur.scrollIntoView({block:"nearest", inline:"nearest"});
+  if(step === "duel") drawRoll();
+  if(push){ window.scrollTo({top:0, behavior:"smooth"}); }
+}
+document.addEventListener("click", e => { const b = e.target.closest("[data-go]"); if(b) go(b.dataset.go); });
+
+/* ---------- audio ---------- */
+let ctx = null, master = null, live = [];
+function audio(){
+  if(!ctx){ ctx = new (window.AudioContext || window.webkitAudioContext)(); }
+  if(ctx.state === "suspended") ctx.resume();
+  return ctx;
+}
+function freshMaster(){
+  if(master){ try{ master.disconnect(); }catch(e){} }
+  live.forEach(n => { try{ n.stop(); }catch(e){} }); live = [];
+  master = ctx.createGain(); master.gain.value = 0.5;
+  const delay = ctx.createDelay(); const fb = ctx.createGain(); const wet = ctx.createGain();
+  fb.gain.value = 0.28; wet.gain.value = 0.3;
+  master.connect(ctx.destination); master.connect(delay); delay.connect(fb); fb.connect(delay); delay.connect(wet); wet.connect(ctx.destination);
+  master._delay = delay;
+}
+const hz = m => 440 * Math.pow(2, (m - 69) / 12);
+function note(voice, midi, t, dur){
+  const o = ctx.createOscillator(), g = ctx.createGain(), p = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
+  let peak = 0.22, att = 0.01, rel = 0.12, out = g;
+  if(voice === "Ember"){
+    o.type = "sawtooth"; const f = ctx.createBiquadFilter(); f.type="lowpass"; f.frequency.value = 2400;
+    o.connect(f); f.connect(g); peak = 0.17;
+  } else if(voice === "Tide"){
+    o.type = "triangle"; o.connect(g); peak = 0.32; att = 0.04; rel = 0.3;
+  } else { o.type = "sine"; o.connect(g); peak = 0.32; }
+  o.frequency.value = hz(midi);
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(peak, t + att);
+  g.gain.exponentialRampToValueAtTime(peak * 0.45, t + Math.max(att + 0.02, dur));
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur + rel);
+  if(p){ p.pan.value = voice === "Ember" ? -0.6 : voice === "Tide" ? 0.6 : 0; g.connect(p); p.connect(master); } else g.connect(master);
+  o.start(t); o.stop(t + dur + rel + 0.05); live.push(o);
+}
+
+/* ---------- step 1 players ---------- */
+const STYLE = {
+  aggressive: ["The aggressive one", ["Lots of quick notes", "Big jumps up and down"]],
+  lyrical: ["The smooth, lyrical one", ["Longer, flowing notes", "Moves in small steps"]],
+  playful: ["The playful one", ["Repeated, bouncy notes", "Rhythms that skip off the beat"]],
+};
+function renderPlayers(){
+  const D = RUNS[preset];
+  $("#players").innerHTML = D.players.map((p, i) => {
+    const [title, traits] = STYLE[p.personality], c = i === 0 ? "ember" : "tide";
+    return `<div class="player" style="--c:var(--${c})"><h3>${p.name}</h3><p>${title}, in this duel.</p>
+      <ul>${traits.map(t => `<li>${t}</li>`).join("")}<li>Plays from your ${i === 0 ? "left" : "right"} speaker</li></ul>
+      <button class="btn c" data-motif="${p.personality}" data-who="${p.name}">Hear ${p.name}’s style</button></div>`;
+  }).join("");
+  document.querySelectorAll("[data-motif]").forEach(b => b.addEventListener("click", () => {
+    audio(); freshMaster(); stopDuel(false);
+    const spb = 60 / 120, t0 = ctx.currentTime + 0.08;
+    master._delay.delayTime.value = 0.375 * spb;
+    MOTIFS[b.dataset.motif].forEach(([s, d, m]) => note(b.dataset.who, m, t0 + s * spb, d * spb * 0.95));
+  }));
+}
+
+/* ---------- step 2: mood map and live composing ---------- */
+const MOOD_LIST = (window.DUEL_DATA || {}).moods || [];
+let pick = null, depth = 3, server = false, jobTimer = null, lastJob = null;
+function moodKeyFor(run){ return run.moodId || null; }
+function buildMap(){
+  const map = $("#map");
+  map.querySelectorAll(".mood").forEach(n => n.remove());
+  MOOD_LIST.forEach(m => {
+    const b = document.createElement("button");
+    b.className = "mood" + (RUNS[m.id] ? " has" : "");
+    b.style.left = (6 + m.darkness * 88) + "%"; b.style.top = (6 + (1 - m.energy) * 88) + "%";
+    b.innerHTML = `<i></i>${m.name}`; b.dataset.mood = m.id;
+    b.setAttribute("aria-label", `${m.name}: ${m.about}`);
+    b.addEventListener("click", e => { e.stopPropagation(); choose({id: m.id, name: m.name, about: m.about, energy: m.energy, darkness: m.darkness}); });
+    map.appendChild(b);
+  });
+  map.addEventListener("click", e => {
+    const r = map.getBoundingClientRect();
+    const darkness = Math.min(1, Math.max(0, ((e.clientX - r.left) / r.width * 100 - 6) / 88));
+    const energy = Math.min(1, Math.max(0, 1 - ((e.clientY - r.top) / r.height * 100 - 6) / 88));
+    const near = MOOD_LIST.reduce((a, m) => (m.energy - energy) ** 2 + (m.darkness - darkness) ** 2 < (a.energy - energy) ** 2 + (a.darkness - darkness) ** 2 ? m : a, MOOD_LIST[0]);
+    choose({id: null, name: "Your own mood", about: `A mood with no name, somewhere near ${near.name.toLowerCase()}.`,
+            energy: +energy.toFixed(2), darkness: +darkness.toFixed(2)});
+  });
+}
+function choose(m, load = true){
+  pick = m;
+  document.querySelectorAll(".mood").forEach(b => b.setAttribute("aria-pressed", b.dataset.mood === m.id));
+  const pin = $("#pin"); pin.hidden = !!m.id;
+  pin.style.left = (6 + m.darkness * 88) + "%"; pin.style.top = (6 + (1 - m.energy) * 88) + "%";
+  $("#pick-name").textContent = m.name; $("#pick-about").textContent = m.about;
+  $("#pick-xy").textContent = `Energy ${m.energy}, darkness ${m.darkness}`;
+  if(load && m.id && RUNS[m.id] && preset !== m.id){ stopDuel(); preset = m.id; renderMood(); }
+  $("#compose").textContent = m.id && RUNS[m.id] ? `Compose a new ${m.name.toLowerCase()} duel` : `Compose this mood`;
+}
+document.querySelectorAll("[data-depth]").forEach(b => b.addEventListener("click", () => {
+  depth = +b.dataset.depth;
+  document.querySelectorAll("[data-depth]").forEach(x => x.setAttribute("aria-pressed", x === b));
+}));
+$("#shuffle").addEventListener("click", () => { $("#seed").value = Math.floor(Math.random() * 1000000); });
+
+async function checkServer(){
+  if(location.protocol === "file:"){ server = false; }
+  else { try { server = (await fetch("/api/ping", {cache: "no-store"})).ok; } catch(e){ server = false; } }
+  $("#compose").disabled = !server; $("#offline").hidden = server;
+}
+$("#compose").addEventListener("click", async () => {
+  if(!pick || !server) return;
+  $("#compose").disabled = true; $("#job").hidden = false; $("#job-done").hidden = true;
+  $("#job-bar").style.width = "2%"; $("#job-line").textContent = "Starting...";
+  const body = {mood: pick.id, energy: pick.energy, darkness: pick.darkness, seed: +$("#seed").value || 0, depth};
+  try {
+    const res = await fetch("/api/compose", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+    const j = await res.json(); if(!res.ok) throw new Error(j.error || "The server refused the request.");
+    lastJob = j.id; pollJob(j.id, body);
+  } catch(e){ $("#job-line").textContent = "Could not start: " + e.message; $("#compose").disabled = false; }
+});
+function pollJob(id, body){
+  clearTimeout(jobTimer);
+  jobTimer = setTimeout(async () => {
+    let j;
+    try { j = await (await fetch(`/api/job/${id}`, {cache: "no-store"})).json(); }
+    catch(e){ $("#job-line").textContent = "Lost contact with python app.py. Is it still running?"; $("#compose").disabled = false; return; }
+    if(j.state === "error"){ $("#job-line").textContent = "The Python program hit an error: " + j.error; $("#compose").disabled = false; return; }
+    const lines = j.lines || [], turns = j.turns || 8;
+    const think = lines.filter(l => / is thinking/.test(l)).pop();
+    $("#job-bar").style.width = Math.max(2, 100 * (j.turn - (j.state === "done" ? 0 : 0.5)) / turns) + "%";
+    $("#job-line").textContent = j.state === "done" ? "Done. Your duel is ready." : (think || "Reading the mood...");
+    if(j.state !== "done") return pollJob(id, body);
+    $("#job-bar").style.width = "100%";
+    const key = "live_" + id;
+    RUNS[key] = Object.assign(j.run, {moodId: body.mood, live: true});
+    preset = key; buildPresets(); renderMood();
+    $("#compose").disabled = false; $("#job-done").hidden = false; $("#job-keep").disabled = false; $("#job-keep").textContent = "Keep it on the website";
+  }, 700);
+}
+$("#job-play").addEventListener("click", () => { go("duel"); playFrom(0, 99); });
+$("#job-keep").addEventListener("click", async () => {
+  try {
+    const j = await (await fetch(`/api/save/${lastJob}`, {method: "POST"})).json();
+    if(j.error) throw new Error(j.error);
+    $("#job-keep").textContent = "Kept. It will be there next time"; $("#job-keep").disabled = true;
+  } catch(e){ $("#job-keep").textContent = "Could not keep it: " + e.message; }
+});
+
+/* ---------- step 2 mood ---------- */
+function renderMood(){
+  const D = RUNS[preset];
+  document.querySelectorAll("[data-preset]").forEach(b => b.setAttribute("aria-pressed", b.dataset.preset === preset));
+  renderPlayers();
+  $("#mood-of").textContent = `Showing: ${D.label}. The mood map point was energy ${D.energy}, darkness ${D.darkness}. Fuzzy logic turned those two numbers into exact musical settings.`;
+  $("#v-energy").textContent = D.energy; $("#v-dark").textContent = D.darkness;
+  $("#m-energy").style.width = D.energy * 100 + "%"; $("#m-dark").style.width = D.darkness * 100 + "%";
+  $("#rules").innerHTML = D.rules.map(r => `<div class="rule ${r.s > 0 ? "" : "off"}">
+      <div class="s">${Math.round(r.s * 100)}%</div>
+      <div>IF ${r.if} THEN ${r.then}<div class="bar"><i style="width:${r.s * 100}%"></i></div></div></div>`).join("");
+  const modeWord = {minor:"Minor key (sad, tense)", major:"Major key (bright, happy)", dorian:"Dorian mode (cool, jazzy)", phrygian:"Phrygian mode (very dark)"}[D.mode];
+  $("#result").innerHTML = [
+    [D.tempo + " BPM", "tempo (beats per minute)"],
+    [D.density + " notes", "per beat on average"],
+    [D.key + " " + D.mode, modeWord],
+    [D.leap > 0.6 ? "Wild" : D.leap > 0.35 ? "Mixed" : "Smooth", "how much the tunes jump"],
+  ].map(([b, s]) => `<div class="chip"><b>${b}</b>${s}</div>`).join("");
+  $("#len").textContent = Math.round(((D.turns.length * 8 + 4) * 60) / D.tempo);
+  $("#tree").src = D.treeUrl || `trees/${preset}.png`;
+  const mm = D.mm, ab = D.ab;
+  $("#s-mm").textContent = mm; $("#s-ab").textContent = ab; $("#s-pct").textContent = Math.round(100 * (1 - ab / mm)) + "%";
+  const w = D.winner, l = w === "Ember" ? "Tide" : "Ember";
+  $("#winner").innerHTML = `<span style="color:var(--${w === "Ember" ? "ember" : "tide"})">${w}</span> wins, ${Math.max(...D.totals).toFixed(1)} to ${Math.min(...D.totals).toFixed(1)}`;
+  $("#final").textContent = `After ${D.turns.length} turns, the scores were ${D.totals[0].toFixed(1)} for Ember and ${D.totals[1].toFixed(1)} for Tide, out of a possible ${D.turns.length * 5} each.`;
+  const last = D.turns[D.turns.length - 1].notes.slice(-1)[0][3];
+  $("#path").innerHTML = `<span>${last}</span>` + D.coda.map((n, i) => `<i>to</i><span class="${i === D.coda.length - 1 ? "home" : ""}">${n[3]}</span>`).join("");
+  $("#astar").textContent = `${w}’s last note was ${last}, and the home note of this piece is ${D.key}. A* explored ${D.astar.expanded} possible steps to find the smoothest way home. Searching without its distance hint (uniform-cost search) explored ${D.astar.ucs_expanded}.`;
+  buildTurns(); resetDuelView(); drawRoll();
+}
+function buildPresets(){
+  const latest = (window.DUEL_DATA || {}).latest;
+  $("#presets").innerHTML = Object.entries(RUNS).map(([k, r]) =>
+    `<button data-preset="${k}"><b>${r.label}</b><small>${r.live ? "just composed" : `energy ${r.energy}, darkness ${r.darkness}`}</small></button>`).join("");
+  document.querySelectorAll("[data-preset]").forEach(b => b.addEventListener("click", () => { stopDuel(); preset = b.dataset.preset; renderMood(); }));
+}
+
+/* ---------- step 3 duel ---------- */
+let playing = false, t0 = 0, startBeat = 0, endBeat = 0, raf = null, shownTurn = -1;
+const totalBeats = () => RUNS[preset].turns.length * 8 + 4;
+
+function buildTurns(){
+  $("#turns").innerHTML = RUNS[preset].turns.map((t, i) =>
+    `<button style="--c:var(--${t.p === "Ember" ? "ember" : "tide"})" data-turn="${i}" aria-label="Play turn ${i + 1}, ${t.p}">${i + 1}</button>`).join("");
+  $("#turns").querySelectorAll("button").forEach(b => b.addEventListener("click", () => playFrom(+b.dataset.turn, +b.dataset.turn + 1)));
+}
+function scheduleAll(fromBeat, toBeat){
+  const D = RUNS[preset], spb = 60 / D.tempo, base = ctx.currentTime + 0.1 - fromBeat * spb;
+  master._delay.delayTime.value = 0.375 * spb;
+  const within = (s) => s >= fromBeat - 1e-6 && s < toBeat - 1e-6;
+  D.turns.forEach((t, i) => {
+    t.notes.forEach(([s, d, m]) => within(s) && note(t.p, m, base + s * spb, d * spb * 0.95));
+    t.bass.forEach((m, bar) => [0, 2].forEach(h => { const s = i * 8 + bar * 4 + h; within(s) && note("bass", m, base + s * spb, 2 * spb * 0.9); }));
+  });
+  const ce = D.turns.length * 8;
+  D.coda.forEach(([s, d, m]) => within(s) && note(D.winner, m, base + s * spb, d * spb * 0.98));
+  within(ce) && note("bass", D.codaBass[0], base + ce * spb, 2 * spb);
+  within(ce + 2) && note("bass", D.codaBass[1], base + (ce + 2) * spb, 3 * spb);
+  return base;
+}
+function playFrom(turn, toTurn){
+  audio(); freshMaster();
+  const D = RUNS[preset];
+  startBeat = turn * 8;
+  endBeat = toTurn >= D.turns.length ? totalBeats() : toTurn * 8;
+  const base = scheduleAll(startBeat, endBeat);
+  t0 = base; playing = true; $("#play").textContent = "Stop";
+  shownTurn = -1; cancelAnimationFrame(raf); tick();
+}
+function stopDuel(redraw = true){
+  if(ctx && master){ freshMaster(); }
+  playing = false; cancelAnimationFrame(raf); $("#play").textContent = "Play the duel";
+  if(redraw) drawRoll(null);
+}
+$("#play").addEventListener("click", () => playing ? stopDuel() : playFrom(0, 99));
+$("#play-end").addEventListener("click", () => { go("duel"); const n = RUNS[preset].turns.length; playFrom(n - 1, 99); });
+
+function beatNow(){ return (ctx.currentTime - t0) * RUNS[preset].tempo / 60; }
+function tick(){
+  const b = beatNow();
+  if(b >= endBeat + 0.5){ playing = false; $("#play").textContent = "Play the duel"; drawRoll(null); showTurn(Math.min(Math.floor((endBeat - 0.01) / 8), RUNS[preset].turns.length), true); return; }
+  drawRoll(b);
+  const turn = Math.floor(Math.max(b, startBeat) / 8);
+  if(turn !== shownTurn) showTurn(turn);
+  raf = requestAnimationFrame(tick);
+}
+
+function totalsUpTo(n){
+  const s = [0, 0]; RUNS[preset].turns.slice(0, n).forEach(t => s[t.p === "Ember" ? 0 : 1] += t.score); return s;
+}
+function setTug(n){
+  const [e, t] = totalsUpTo(n);
+  $("#tot-e").textContent = e.toFixed(1); $("#tot-t").textContent = t.toFixed(1);
+  $("#tug").style.width = (e + t > 0 ? 100 * e / (e + t) : 50) + "%";
+}
+function resetDuelView(){
+  shownTurn = -1; setTug(0); $("#parts").innerHTML = "";
+  $("#say").style.removeProperty("--c");
+  $("#say").innerHTML = `<h3>Press play to start</h3><p>The duel lasts about <span id="len">${Math.round((totalBeats() * 60) / RUNS[preset].tempo)}</span> seconds. Turn your volume up.</p>`;
+  document.querySelectorAll("#turns button").forEach(b => b.classList.remove("now"));
+}
+function showTurn(i, done = false){
+  shownTurn = i;
+  const D = RUNS[preset];
+  document.querySelectorAll("#turns button").forEach((b, k) => b.classList.toggle("now", k === i));
+  if(i >= D.turns.length){
+    setTug(D.turns.length);
+    $("#say").style.setProperty("--c", `var(--gold)`);
+    $("#say").innerHTML = `<h3>The ending</h3><p>${D.winner} won with ${Math.max(...D.totals).toFixed(1)} points, so it gets the last word: a short ending, planned by A* search, that lands on the home note ${D.key}.</p><p class="notes">${D.coda.map(n => n[3]).join("  ")}</p>`;
+    $("#parts").innerHTML = ""; return;
+  }
+  const t = D.turns[i], rival = t.p === "Ember" ? "Tide" : "Ember", col = t.p === "Ember" ? "ember" : "tide";
+  setTug(done ? i + 1 : i);
+  const first = i === 0;
+  const lead = first ? `${t.p} opens the duel. There’s nothing to reply to yet, so it just has to sound good over the chords.`
+                     : `${t.p} answers ${rival}’s last tune, trying to start where ${rival} stopped and echo its rhythm without copying it.`;
+  const look = t.nodes <= 6 ? `This is the last turn, so there was no future left to think about. It simply played its best option.`
+             : `Before playing, it imagined ${t.nodes} possible futures and skipped ${t.pruned} branches that were clearly worse.`;
+  $("#say").style.setProperty("--c", `var(--${col})`);
+  $("#say").innerHTML = `<h3>Turn ${i + 1}: ${t.p} plays</h3><p>${lead}</p><p>${look}</p><p class="notes">${t.notes.map(n => n[3]).join("  ")}</p>`;
+  const rows = [
+    ["Sounds natural", "the neural network’s opinion", t.critic],
+    ["Fits the chords", "important notes match the harmony", t.harm],
+    ["Fits the mood", "speed, range, jumpiness", t.mood],
+    ["Good reply", "connects to the rival’s tune", t.coh],
+  ];
+  $("#parts").innerHTML = `<div><span class="big" style="color:var(--${col})">${t.score.toFixed(1)}</span> <span style="color:var(--muted)">out of 10</span></div>` +
+    rows.map(([a, s, v]) => `<div class="row"><span>${a}<small>${s}</small></span><div class="meter"><i style="width:${v * 100}%;background:var(--${col})"></i></div><em>${Math.round(v * 100)}%</em></div>`).join("");
+}
+
+function drawRoll(beat = null){
+  const cv = $("#roll"); if(!cv.offsetParent) return;
+  const D = RUNS[preset], dpr = window.devicePixelRatio || 1;
+  const W = cv.clientWidth, H = cv.clientHeight;
+  cv.width = W * dpr; cv.height = H * dpr;
+  const g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
+  const all = D.turns.flatMap(t => t.notes).concat(D.coda), lo = Math.min(...all.map(n => n[2])) - 2, hi = Math.max(...all.map(n => n[2])) + 2;
+  const top = 24, bottom = 8, padL = 8, padR = 8;
+  const x = b => padL + (b / totalBeats()) * (W - padL - padR), y = m => top + (hi - m) / (hi - lo) * (H - top - bottom);
+  const cur = beat === null ? -1 : Math.floor(beat / 8);
+  g.font = `12px ${css("--body")}`;
+  D.turns.forEach((t, i) => {
+    const c = css(t.p === "Ember" ? "--ember" : "--tide");
+    if(i === cur){ g.fillStyle = c; g.globalAlpha = 0.12; g.fillRect(x(i * 8), 0, x(8) - x(0), H); g.globalAlpha = 1; }
+    g.strokeStyle = css("--line"); g.beginPath(); g.moveTo(x(i * 8), 0); g.lineTo(x(i * 8), H); g.stroke();
+    g.fillStyle = css("--muted"); g.fillText(`${i + 1} ${t.p}`, x(i * 8) + 4, 15);
+    t.notes.forEach(([s, d, m]) => {
+      const played = beat !== null && s <= beat;
+      g.fillStyle = c; g.globalAlpha = beat === null || played ? 1 : 0.35;
+      const h = Math.max(7, (H - top - bottom) / (hi - lo) * 0.8);
+      g.beginPath(); g.roundRect ? g.roundRect(x(s), y(m) - h / 2, Math.max(3, x(s + d) - x(s) - 2), h, 3) : g.rect(x(s), y(m) - h / 2, x(s + d) - x(s) - 2, h); g.fill();
+    });
+  });
+  g.globalAlpha = 1;
+  const ce = D.turns.length * 8;
+  g.strokeStyle = css("--line"); g.beginPath(); g.moveTo(x(ce), 0); g.lineTo(x(ce), H); g.stroke();
+  g.fillStyle = css("--muted"); g.fillText("End", x(ce) + 4, 15);
+  D.coda.forEach(([s, d, m]) => {
+    g.fillStyle = css("--gold"); g.globalAlpha = beat === null || s <= beat ? 1 : 0.35;
+    const h = Math.max(7, (H - top - bottom) / (hi - lo) * 0.8);
+    g.beginPath(); g.roundRect ? g.roundRect(x(s), y(m) - h / 2, x(s + d) - x(s) - 2, h, 3) : g.rect(x(s), y(m) - h / 2, x(s + d) - x(s) - 2, h); g.fill();
+  });
+  g.globalAlpha = 1;
+  if(beat !== null){
+    g.strokeStyle = css("--ink"); g.lineWidth = 2; g.beginPath(); g.moveTo(x(beat), 0); g.lineTo(x(beat), H); g.stroke(); g.lineWidth = 1;
+  }
+}
+window.addEventListener("resize", () => drawRoll(playing ? beatNow() : null));
+
+/* ---------- start ---------- */
+if(!preset){
+  document.querySelector(".wrap").innerHTML = `<h1>No duels yet</h1><p>Run <code class="inline">python duel.py --mood calm</code> in the project folder. It writes <code class="inline">web/data.js</code>, which this page reads. Then reload.</p>`;
+} else {
+  buildPresets(); renderMood(); buildMap();
+  const first = MOOD_LIST.find(m => m.id === preset) || MOOD_LIST[0];
+  if(first) choose(first, false);
+  checkServer();
+}
+if(preset) go((location.hash || "").slice(1) || "meet", false);
+</script>
+</body>
+</html>
