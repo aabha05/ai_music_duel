@@ -10,6 +10,8 @@ pinned: false
 
 # AI Music Duel
 
+**Live demo:** https://ai-music-duel.onrender.com  |  **Code:** https://github.com/aabha05/ai_music_duel
+
 Two AI musicians, **Ember** (aggressive) and **Tide** (lyrical), battle in call-and-response.
 Each turn, one plays a 2-bar phrase and the other must answer it. Each one thinks
 ahead with minimax to play phrases its rival will struggle to answer well.
@@ -51,11 +53,14 @@ Terminal runs save into `output/<mood>/`:
 
 ### Putting it online
 
-- **Hugging Face Spaces (full version, composes live):** create a Space with the Docker SDK and
-  upload the whole project. The `Dockerfile` and the settings block at the top of this README
-  tell it how to run `app.py`.
-- **Vercel (website only, plays saved duels):** import the GitHub repository with
-  **Root Directory** set to `web`.
+- **Live demo:** https://ai-music-duel.onrender.com (hosted on Render's free tier)
+- **Source code:** https://github.com/aabha05/ai_music_duel
+
+Render settings: language Python 3, build command `pip install -r requirements.txt`,
+start command `python app.py`, environment variables `HOST=0.0.0.0` and `LIGHT_MODE=1`.
+Light mode looks 2 phrases ahead with a smaller genetic algorithm (population 30,
+15 generations) so each duel stays quick on the small free server. The free server
+sleeps after 15 minutes without visitors and takes about a minute to wake.
 
 Every run is also added to the demo website (`web/data.js` and `web/trees/`). The website
 works on its own too (open `web/index.html`, or host the `web` folder on Vercel); it then
